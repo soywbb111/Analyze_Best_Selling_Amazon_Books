@@ -1,0 +1,45 @@
+# ====================
+# Python
+# ====================
+__pycache__/
+*.py[cod]
+*.so
+
+# ====================not has yet
+# Jupyter Notebook
+# ====================
+.ipynb_checkpoints/
+
+# ====================
+# Virtual Environments
+# ====================
+venv/
+env/
+.venv/
+
+# ====================
+# Editor Configs
+# ====================
+.vscode/
+.idea/
+
+# ====================
+# System Files
+# ====================
+.DS_Store
+Thumbs.db
+
+# ====================
+# Output Files (results, charts)
+# ====================
+outputs/
+*.csv
+*.xlsx
+*.png
+*.jpg
+*.pdf
+
+# ====================
+# Logs or debug
+# ====================
+*.log
