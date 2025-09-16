@@ -43,3 +43,10 @@ outputs/
 # Logs or debug
 # ====================
 *.log
+# data nặng
+data/raw/
+data/*.parquet
+data/*.jsonl
+# notebooks checkpoint
+.ipynb_checkpoints/
+
