@@ -12,18 +12,18 @@ from bs4 import BeautifulSoup
 from requests.adapters import HTTPAdapter
 from urllib3.util.retry import Retry
 
-# ---------- Cấu hình nguồn ----------
+# =================== CẤU HÌNH CƠ BẢN ===================
 BASE = "https://www.amazon.com"
+# Trang đầu hiện hành (Amazon có 2 kiểu route, bắt đầu từ route mới)
 LIST_URL = "https://www.amazon.com/gp/bestsellers/books"
 
-# Một số User-Agent phổ biến để xoay vòng
 UA_POOL = [
     "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0 Safari/537.36",
     "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.5 Safari/605.1.15",
     "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/123.0 Safari/537.36",
 ]
 
-# ---------- HTTP SESSION + RETRY ----------
+# =================== HTTP SESSION + RETRY ===================
 def make_session():
     s = requests.Session()
     retry = Retry(
@@ -38,55 +38,64 @@ def make_session():
     return s
 
 SESSION = make_session()
+
 def http_get(url, max_retries=3, backoff_base=2):
-    """GET với headers giả lập trình duyệt + retry/backoff nhẹ."""
+    """GET với headers + retry và nhận diện robot/captcha."""
+    last_err = None
     for i in range(max_retries):
         headers = {
             "User-Agent": random.choice(UA_POOL),
             "Accept-Language": "en-US,en;q=0.9",
             "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
             "Referer": BASE,
+            "Cache-Control": "no-cache",
         }
-        resp = requests.get(url, headers=headers, timeout=20)
-        # tránh trang captcha/robot
-        if resp.status_code == 200 and ("captcha" not in resp.text.lower()):
-            return resp
-        time.sleep(backoff_base + i * 2 + random.random() * 2)
-    raise RuntimeError(f"Failed to fetch {url}")
+        # thêm nhiễu nhẹ để tránh cache
+        noise = f"&_={int(time.time()*1000)}{random.randint(100,999)}"
+        sep = "&" if "?" in url else "?"
+        url_noised = url + sep + noise
 
-# ---------- Các parser nhỏ ----------
+        try:
+            resp = SESSION.get(url_noised, headers=headers, timeout=30)
+            tl = resp.text.lower()
+            blocked = ("captcha" in tl
+                       or "robot check" in tl
+                       or "make sure you're not a robot" in tl)
+            if resp.status_code == 200 and not blocked:
+                return resp
+            last_err = f"status={resp.status_code}, blocked={blocked}"
+        except Exception as e:
+            last_err = str(e)
+
+        time.sleep(backoff_base + i * 2 + random.random() * 2.5)
+    raise RuntimeError(f"Failed to fetch {url} ({last_err})")
+
+# =================== TIỆN ÍCH PARSER ===================
 def clean_int(text):
-    """Chuyển '212,762 ratings' -> 212762"""
-    if not text:
-        return None
+    if not text: return None
     digits = re.sub(r"[^\d]", "", text)
     return int(digits) if digits else None
 
 def parse_price(text):
-    """Trích số tiền từ '$12.95'."""
-    if not text:
-        return None
+    if not text: return None
     text = text.replace(",", "")
     m = re.search(r"\$([\d\.]+)", text)
     return float(m.group(1)) if m else None
 
 def to_year(date_text):
-    """Trích năm từ 'December 10, 2019' hoặc '2019' hoặc 'Reprint edition (December 10, 2019)'."""
-    if not date_text:
-        return None
+    if not date_text: return None
     s = date_text.strip()
-    # nếu có ngoặc, ưu tiên phần trong ngoặc
     m = re.search(r"\((.*?)\)", s)
-    if m:
-        s = m.group(1).strip()
+    if m: s = m.group(1).strip()
     for fmt in ("%B %d, %Y", "%B %Y", "%Y"):
         try:
             return datetime.datetime.strptime(s, fmt).year
         except ValueError:
-            continue
+            pass
     m2 = re.search(r"(19|20)\d{2}", s)
     return int(m2.group(0)) if m2 else None
 
+# =================== PARSE TRANG DANH SÁCH ===================
 def parse_list_page(html):
     """Lấy Name, Author, Rating, Reviews, Price, url từ trang list."""
     soup = BeautifulSoup(html, "lxml")
@@ -288,6 +297,7 @@ def main():
     args = ap.parse_args()
 
     os.makedirs(os.path.dirname(args.out), exist_ok=True)
+
     rows = scrape_exact_n(n=args.limit)
 
     fieldnames = ["Name", "Author", "User Rating", "Reviews", "Language", "Price", "Publisher_year", "Genre"]
@@ -298,6 +308,6 @@ def main():
             w.writerow(r)
 
     print(f"[DONE] Saved {len(rows)} rows to {args.out}")
-    
+
 if __name__ == "__main__":
     main()
