@@ -289,7 +289,7 @@ def scrape_exact_n(n=52,
 
     return results
 
-# =================== CLI ===================
+# =================== CLI =================
 def main():
     ap = argparse.ArgumentParser(description="Scrape ~52 Amazon Best Sellers (Books).")
     ap.add_argument("--limit", type=int, default=52, help="Số sách cần lấy (mặc định 52)")
@@ -310,4 +310,4 @@ def main():
     print(f"[DONE] Saved {len(rows)} rows to {args.out}")
 
 if __name__ == "__main__":
-    main()
+    main(
