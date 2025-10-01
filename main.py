@@ -1,3 +1,4 @@
+import matplotlib
 import pandas as pd
 # Rest of the file go here...
 # 52 books best sellers in 25 Sep 2025.
@@ -17,6 +18,7 @@ df.rename(columns={"Name":"Title", "User Rating": "Rating", "Publisher_year":"Pu
 
 # covert the data type
 # run an analysis
+# Q0: authors have how many books in the top 52 best sellers book.
 author_counts = df["Author"].value_counts()
 print(author_counts)
 
@@ -41,6 +43,7 @@ sns.regplot(x ="Price", y = "Rating", data = df, scatter_kws={"alpha":0.5})
 plt.title("Correlation Between Price and User Rating")
 plt.xlabel("Price (USD)")
 plt.ylabel("Rating (Star)")
+plt.savefig("results/price_vs_rating_correlation_plot.pdf") #Export
 plt.show()
 
 # Q5: Are recently published books rated higher than older ones?
@@ -50,6 +53,7 @@ year_rating.plot(kind='line', marker='o')
 plt.title("Average Rating by Publication Year")
 plt.xlabel("Publication Year (Year)")
 plt.ylabel("Rating (Star)")
+plt.savefig("results/avg_rating_by_year.pdf") #Export
 plt.show()
 
 # Q6: 
@@ -62,7 +66,20 @@ plt.ylabel("Number of Books")
 import matplotlib.ticker as mticker
 ax = plt.gca()
 ax.yaxis.set_major_locator(mticker.MaxNLocator(integer=True))
+plt.savefig("results/number_of_best_selling books by year.pdf") #Export
 plt.show()
 
+#Results
+# Q0: authors have how many books in the top 52 best sellers book.
+author_counts.head(10).to_csv("results/author_count.csv")
+
+# Q1: Export 10 top authors with high average user ratings
+avg_rating_by_author.head(10).to_csv("results/avg_rating_by_author.csv")
+
+# Q2: top 1 the genre with the highest average book price
+genre_price.head(1).to_csv("results/genre_price.csv")
+
+# Q3: top 1 the genre with the highest user rating
+genre_rating.head(1).to_csv("results/genre_rating.csv")
 
 
